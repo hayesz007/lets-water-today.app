@@ -3,91 +3,124 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>YourStartup</title>
-  <meta name="description" content="A student startup prototype for BSAD 281.">
+  <meta name="theme-color" content="#f4f4ed">
+  <meta name="description" content="A simple plant watering tracker that helps you remember when your plants need care.">
+  <title>Sprig | Plant care</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-  <!-- =========================================================
-       HEADER: logo text + navigation.
-       Each link points to a "view" further down the page (#home, #explore, #about).
-       ========================================================= -->
   <header class="site-header">
-    <a class="brand" href="#home" id="brand-name">YourStartup</a>
+    <a class="brand" href="#plants" id="brand-name" aria-label="Sprig, my plants">Sprig</a>
     <nav aria-label="Main">
-      <a href="#home">Home</a>
-      <a href="#explore">Explore</a>
-      <a href="#about">About</a>
+      <a href="#plants">My plants</a>
+      <a href="#sitter">Plant sitter</a>
     </nav>
   </header>
 
   <main>
-
-    <!-- =======================================================
-         VIEW 1: HOME — what you do, for whom, and why it matters.
-         ======================================================= -->
-    <section id="home" data-view>
-      <div class="hero">
-        <p class="eyebrow">Prototype</p>
-        <h1 id="tagline">One sentence that says what your startup does.</h1>
-        <p class="lead" id="pitch">
-          Who is your customer, what problem do they have, and why is your
-          solution better than what they use today?
-        </p>
-        <a class="button" href="#explore">See it in action</a>
+    <section id="plants" data-view>
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow" id="today-label">Your little patch of green</p>
+          <h1 id="tagline">A little care goes a long way.</h1>
+          <p class="lead" id="pitch">A calmer way to remember when every plant needs a drink.</p>
+        </div>
+        <button class="button add-button" id="add-plant" type="button"><span aria-hidden="true">+</span> Add a plant</button>
       </div>
 
-      <div class="steps">
-        <div class="card">
-          <h2>1. Step one</h2>
-          <p>Describe the first thing a customer does.</p>
+      <section class="overview" aria-label="Plant care summary">
+        <div class="overview-mark" aria-hidden="true">✳</div>
+        <div>
+          <p class="overview-label">Your plant shelf</p>
+          <p class="overview-summary" id="due-summary" aria-live="polite"></p>
         </div>
-        <div class="card">
-          <h2>2. Step two</h2>
-          <p>Describe what happens next.</p>
+        <p class="plant-count" id="plant-count"></p>
+      </section>
+
+      <section class="add-panel" id="plant-form-panel" hidden aria-labelledby="form-title">
+        <div class="form-heading">
+          <div>
+            <p class="eyebrow">A new leafy friend</p>
+            <h2 id="form-title">Add a plant</h2>
+          </div>
+          <button class="text-button" id="cancel-add" type="button">Cancel</button>
         </div>
-        <div class="card">
-          <h2>3. Step three</h2>
-          <p>Describe the result the customer gets.</p>
+        <form id="plant-form">
+          <label class="field">
+            <span>Plant name</span>
+            <input id="plant-name" name="name" type="text" placeholder="e.g. Kitchen pothos" maxlength="50" required>
+          </label>
+          <label class="field">
+            <span>Plant type <span class="optional">Optional</span></span>
+            <input name="species" type="text" placeholder="e.g. Golden pothos" maxlength="60">
+          </label>
+          <label class="field field-short">
+            <span>Water every</span>
+            <span class="input-with-unit"><input name="interval" type="number" min="1" max="90" value="7" required><span>days</span></span>
+          </label>
+          <label class="field field-short">
+            <span>Last watered</span>
+            <input id="watering-date" name="lastWatered" type="date" required>
+          </label>
+          <div class="form-actions">
+            <button class="button" type="submit">Save plant</button>
+          </div>
+        </form>
+      </section>
+
+      <div class="list-heading">
+        <h2>Your plants</h2>
+        <div class="filter-controls" role="group" aria-label="Filter plants">
+          <button type="button" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" data-filter="due" aria-pressed="false">Need water</button>
+          <button type="button" data-filter="healthy" aria-pressed="false">Doing well</button>
         </div>
       </div>
+      <div class="plant-grid" id="plant-grid"></div>
+      <p class="empty" id="empty-message" hidden></p>
+      <p class="storage-note">Your plant list is saved in this browser on this device.</p>
     </section>
 
-    <!-- =======================================================
-         VIEW 2: EXPLORE — a list built from the fake data in data.js.
-         ======================================================= -->
-    <section id="explore" data-view hidden>
-      <h1>Explore</h1>
-      <p class="muted">These examples are fake. They come from <code>data.js</code>.</p>
+    <section id="sitter" data-view hidden>
+      <div class="sitter-intro">
+        <p class="eyebrow">A future Sprig service</p>
+        <h1>Going away?<br>Leave the leaves to us.</h1>
+        <p class="lead">Find a trusted local plant sitter to keep your indoor jungle happy while you're out of town.</p>
+        <button class="button" id="sitter-interest" type="button" aria-pressed="false">Keep me posted</button>
+        <p class="sitter-note" id="sitter-note" aria-live="polite"></p>
+      </div>
 
-      <label class="search">
-        <span>Search</span>
-        <input type="search" id="search-box" placeholder="Type to filter…">
-      </label>
+      <div class="sitter-details">
+        <div class="sitter-step">
+          <span class="step-number">01</span>
+          <h2>Share your plant list</h2>
+          <p>Your care notes tell a sitter exactly what each plant needs.</p>
+        </div>
+        <div class="sitter-step">
+          <span class="step-number">02</span>
+          <h2>Meet a local sitter</h2>
+          <p>Choose someone nearby and agree on dates before a trip.</p>
+        </div>
+        <div class="sitter-step">
+          <span class="step-number">03</span>
+          <h2>Come home to happy plants</h2>
+          <p>Get simple care updates while you're away.</p>
+        </div>
+      </div>
 
-      <p class="muted" id="saved-count"></p>
-      <div class="grid" id="listing-grid"></div>
-      <p class="empty" id="empty-message" hidden>Nothing matches your search.</p>
+      <aside class="business-note">
+        <p class="eyebrow">A sensible way to grow</p>
+        <h2>Keep the basics free. Charge for the extra care.</h2>
+        <p>Ads could make plant advice feel less trustworthy. A better first step is a free watering tracker, with an optional paid plan for shared collections and detailed care guides. If local sitters join later, Sprig could earn a small fee from each completed booking.</p>
+        <p class="prototype-label">Sitter matching, payments, and bookings are not available in this student prototype.</p>
+      </aside>
     </section>
-
-    <!-- =======================================================
-         VIEW 3: ABOUT — your team and your story.
-         ======================================================= -->
-    <section id="about" data-view hidden>
-      <h1>About us</h1>
-      <p>Tell the story of why your team started this company.</p>
-      <p>Use first names only, or no names at all — this site is public.</p>
-    </section>
-
   </main>
 
-  <!-- Keep this footer. Your site must say it is a student project. -->
   <footer class="site-footer">
     <p>Student prototype for BSAD 281 at St. Francis Xavier University. Not a real company — all data is fictional.</p>
   </footer>
 
-  <!-- Scripts load in this order: data first, then the code that uses it. -->
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>
