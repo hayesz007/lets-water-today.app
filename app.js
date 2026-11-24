@@ -1,230 +1,313 @@
 (function () {
   "use strict";
 
-  const storage = {
-    get: function (key, fallback) {
-      try {
-        const saved = localStorage.getItem(key);
-        return saved === null ? fallback : JSON.parse(saved);
-      } catch (error) {
-        return fallback;
-      }
-    },
-    set: function (key, value) {
-      try {
-        localStorage.setItem(key, JSON.stringify(value));
-      } catch (error) {
-        // The tracker still works for this visit if browser storage is unavailable.
-      }
-    }
-  };
+  const bays = BAYSHARE_DATA.bays;
+  const zoneFilter = document.getElementById("zone-filter");
+  const typeFilter = document.getElementById("type-filter");
+  const rateFilter = document.getElementById("rate-filter");
+  const densitySlider = document.getElementById("density-slider");
+  const bayGrid = document.getElementById("bay-grid");
+  const modal = document.getElementById("booking-modal");
+  const bookingContent = document.getElementById("booking-content");
+  let reservations = [];
+  let selectedBay = null;
+  let selectedDate = "";
+  let selectedTime = "";
 
-  const today = new Date();
-  const todayString = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
-  let plants = storage.get("sprig-plants", STARTER_PLANTS);
-  let activeFilter = "all";
-  let sitterInterest = storage.get("sprig-sitter-interest", false);
+  const zones = [...new Set(bays.map(function (bay) { return bay.zone; }))].sort();
+  zones.forEach(function (zone) {
+    const option = document.createElement("option");
+    option.value = zone;
+    option.textContent = zone;
+    zoneFilter.appendChild(option);
+  });
 
-  document.title = STARTUP.name + " | Plant care";
-  document.getElementById("brand-name").textContent = STARTUP.name;
-  document.getElementById("tagline").textContent = STARTUP.tagline;
-  document.getElementById("pitch").textContent = STARTUP.pitch;
-
-  const plantGrid = document.getElementById("plant-grid");
-  const plantForm = document.getElementById("plant-form");
-  const formPanel = document.getElementById("plant-form-panel");
-  const emptyMessage = document.getElementById("empty-message");
-  const filterButtons = document.querySelectorAll("[data-filter]");
-  const sitterButton = document.getElementById("sitter-interest");
-
-  function localDate(value) {
-    const parts = value.split("-").map(Number);
-    return new Date(parts[0], parts[1] - 1, parts[2]);
+  function density() {
+    return Number(densitySlider.value);
   }
 
-  function dayNumber(value) {
-    const parts = value.split("-").map(Number);
-    return Math.floor(Date.UTC(parts[0], parts[1] - 1, parts[2]) / 86400000);
+  function dateLabel(offset) {
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    return {
+      value: [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-"),
+      label: date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+    };
   }
 
-  function daysUntilWater(plant) {
-    const dueDay = dayNumber(plant.lastWatered) + Number(plant.intervalDays);
-    return dueDay - dayNumber(todayString);
+  function filteredBays() {
+    const zone = zoneFilter.value;
+    const type = typeFilter.value;
+    const maxRate = Number(rateFilter.value);
+    return bays.filter(function (bay) {
+      return (zone === "all" || bay.zone === zone)
+        && (type === "all" || bay.type === type)
+        && bay.rate <= maxRate;
+    });
   }
 
-  function formatDate(value) {
-    return localDate(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  function visibleCountFor(resultCount) {
+    const ratio = (density() - 2) / 13;
+    return Math.max(1, Math.min(resultCount, Math.ceil(resultCount * (0.25 + ratio * 0.75))));
   }
 
-  function dueLabel(days) {
-    if (days < 0) return "Overdue by " + Math.abs(days) + (Math.abs(days) === 1 ? " day" : " days");
-    if (days === 0) return "Water today";
-    if (days === 1) return "Water tomorrow";
-    return "Water in " + days + " days";
+  function getDisplaySlots(bay) {
+    const densityBoost = Math.floor((density() - 2) * bay.slots / 13);
+    return Math.max(1, bay.slots + densityBoost);
   }
 
-  function makePlantCard(plant) {
-    const days = daysUntilWater(plant);
+  function render() {
+    const matches = filteredBays();
+    const visibleCount = visibleCountFor(matches.length);
+    const visible = matches.slice(0, visibleCount);
+
+    document.getElementById("density-output").textContent = density() + (density() === 1 ? " bay" : " bays");
+    document.getElementById("network-bays").textContent = density();
+    const avgDistance = matches.length
+      ? 2.2 + 7.4 * ((15 - density()) / 13)
+      : 0;
+    document.getElementById("network-distance").textContent = matches.length ? avgDistance.toFixed(1) + " mi" : "—";
+    const weekendSlots = matches.reduce(function (total, bay) {
+      return total + getDisplaySlots(bay);
+    }, 0);
+    document.getElementById("weekend-slots").textContent = weekendSlots;
+    document.getElementById("density-impact").textContent =
+      density() <= 5
+        ? "A small network: fewer options and longer average trips."
+        : density() >= 12
+          ? "A dense network: nearby choices and more weekend openings."
+          : "More local bays improve choice and reduce average drive time.";
+
+    document.getElementById("result-count").textContent =
+      visible.length === 1 ? "1 bay shown" : visible.length + " bays shown";
+    bayGrid.replaceChildren.apply(bayGrid, visible.map(makeBayCard));
+    document.getElementById("empty-state").hidden = visible.length > 0;
+  }
+
+  function makeBayCard(bay) {
     const card = document.createElement("article");
-    card.className = "plant-card";
-    card.dataset.id = plant.id;
+    card.className = "bay-card";
+    card.dataset.id = bay.id;
 
-    const header = document.createElement("div");
-    header.className = "plant-card-top";
-    const marker = document.createElement("span");
-    marker.className = "plant-marker";
-    marker.setAttribute("aria-hidden", "true");
-    const status = document.createElement("span");
-    status.className = "status " + (days <= 0 ? "status-due" : "status-okay");
-    status.textContent = dueLabel(days);
-    header.append(marker, status);
+    const visual = document.createElement("div");
+    visual.className = "bay-visual";
+    const tag = document.createElement("span");
+    tag.className = "visual-tag";
+    tag.textContent = bay.type;
+    visual.appendChild(tag);
 
-    const name = document.createElement("h2");
-    name.textContent = plant.name;
-    const species = document.createElement("p");
-    species.className = "plant-species";
-    species.textContent = plant.species || "Plant";
+    const body = document.createElement("div");
+    body.className = "bay-body";
+    const titleRow = document.createElement("div");
+    titleRow.className = "bay-title-row";
+    const titleWrap = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = bay.name;
+    const zone = document.createElement("p");
+    zone.className = "zone-label";
+    zone.textContent = bay.zone;
+    titleWrap.append(title, zone);
+    const rate = document.createElement("p");
+    rate.className = "rate";
+    rate.innerHTML = "$" + bay.rate + "<span>/hr</span>";
+    titleRow.append(titleWrap, rate);
 
-    const details = document.createElement("p");
-    details.className = "plant-details";
-    details.textContent = "Every " + plant.intervalDays + " days · Last watered " + formatDate(plant.lastWatered);
+    const meta = document.createElement("div");
+    meta.className = "bay-meta";
+    bay.features.slice(0, 3).forEach(function (feature) {
+      const item = document.createElement("span");
+      item.textContent = feature;
+      meta.appendChild(item);
+    });
 
-    const actions = document.createElement("div");
-    actions.className = "plant-actions";
-    const waterButton = document.createElement("button");
-    waterButton.type = "button";
-    waterButton.className = "button button-small";
-    waterButton.dataset.action = "water";
-    waterButton.textContent = "Watered today";
-    const removeButton = document.createElement("button");
-    removeButton.type = "button";
-    removeButton.className = "text-button";
-    removeButton.dataset.action = "remove";
-    removeButton.textContent = "Remove";
-    actions.append(waterButton, removeButton);
+    const footer = document.createElement("div");
+    footer.className = "bay-footer";
+    const distance = document.createElement("span");
+    distance.className = "distance";
+    distance.textContent = (bay.distance - (density() - 2) * 0.08).toFixed(1) + " mi away";
+    const availability = document.createElement("span");
+    availability.className = "availability";
+    availability.textContent = getDisplaySlots(bay) + " weekend slots";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "button select-button";
+    button.dataset.action = "book";
+    button.textContent = "Select bay";
+    footer.append(distance, availability, button);
 
-    card.append(header, name, species, details, actions);
+    body.append(titleRow, meta, footer);
+    card.append(visual, body);
     return card;
   }
 
-  function renderPlants() {
-    const dueCount = plants.filter(function (plant) { return daysUntilWater(plant) <= 0; }).length;
-    const countLabel = dueCount === 1 ? "1 plant needs water" : dueCount + " plants need water";
-    document.getElementById("due-summary").textContent = dueCount === 0 ? "All caught up. Your plants are looking good." : countLabel;
-    document.getElementById("plant-count").textContent = plants.length + (plants.length === 1 ? " plant" : " plants");
-
-    const visiblePlants = plants.filter(function (plant) {
-      const needsWater = daysUntilWater(plant) <= 0;
-      return activeFilter === "all" || (activeFilter === "due" && needsWater) || (activeFilter === "healthy" && !needsWater);
-    }).sort(function (first, second) {
-      return daysUntilWater(first) - daysUntilWater(second);
-    });
-
-    plantGrid.replaceChildren.apply(plantGrid, visiblePlants.map(makePlantCard));
-    emptyMessage.hidden = visiblePlants.length > 0;
-    if (plants.length === 0) {
-      emptyMessage.textContent = "Your plant shelf is empty. Add a plant to get started.";
-    } else if (activeFilter === "due") {
-      emptyMessage.textContent = "Nothing needs water right now. Nice work.";
-    } else if (activeFilter === "healthy") {
-      emptyMessage.textContent = "No plants in this view yet.";
-    } else {
-      emptyMessage.textContent = "No plants yet. Add one to get started.";
-    }
-    storage.set("sprig-plants", plants);
+  function openBooking(bay) {
+    selectedBay = bay;
+    selectedDate = dateLabel(1).value;
+    selectedTime = "";
+    renderBooking();
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
   }
 
-  function showView() {
-    const requested = (window.location.hash || "#plants").slice(1);
-    const current = requested === "sitter" ? "sitter" : "plants";
-    document.querySelectorAll("[data-view]").forEach(function (view) {
-      view.hidden = view.id !== current;
+  function renderBooking() {
+    const dates = [dateLabel(1), dateLabel(2), dateLabel(3), dateLabel(7), dateLabel(8), dateLabel(9)];
+    const times = ["8:00 AM", "10:00 AM", "12:00 PM", "2:00 PM", "4:00 PM", "6:00 PM"];
+    bookingContent.innerHTML = "";
+
+    const heading = document.createElement("div");
+    heading.className = "booking-heading";
+    const eyebrow = document.createElement("p");
+    eyebrow.className = "eyebrow";
+    eyebrow.textContent = "Reserve a bay";
+    const title = document.createElement("h2");
+    title.id = "booking-title";
+    title.textContent = selectedBay.name;
+    const subtitle = document.createElement("p");
+    subtitle.textContent = selectedBay.zone + " · " + selectedBay.type + " · $" + selectedBay.rate + "/hour";
+    heading.append(eyebrow, title, subtitle);
+
+    const dateSection = document.createElement("section");
+    dateSection.className = "booking-section";
+    const dateTitle = document.createElement("h3");
+    dateTitle.textContent = "Choose a date";
+    const dateOptions = document.createElement("div");
+    dateOptions.className = "date-options";
+    dates.forEach(function (date) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "choice" + (date.value === selectedDate ? " selected" : "");
+      button.textContent = date.label;
+      button.dataset.date = date.value;
+      dateOptions.appendChild(button);
     });
-    document.querySelectorAll("nav a").forEach(function (link) {
-      if (link.getAttribute("href") === "#" + current) {
-        link.setAttribute("aria-current", "page");
-      } else {
-        link.removeAttribute("aria-current");
-      }
+    dateSection.append(dateTitle, dateOptions);
+
+    const timeSection = document.createElement("section");
+    timeSection.className = "booking-section";
+    const timeTitle = document.createElement("h3");
+    timeTitle.textContent = "Choose a start time";
+    const timeOptions = document.createElement("div");
+    timeOptions.className = "time-options";
+    times.forEach(function (time, index) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "choice" + (time === selectedTime ? " selected" : "");
+      button.textContent = time;
+      button.dataset.time = time;
+      if (index === 5 && density() < 6) button.disabled = true;
+      timeOptions.appendChild(button);
     });
-    window.scrollTo(0, 0);
+    timeSection.append(timeTitle, timeOptions);
+
+    const summary = document.createElement("div");
+    summary.className = "booking-summary";
+    const dateName = dates.find(function (date) { return date.value === selectedDate; });
+    summary.innerHTML =
+      "<span>2-hour reservation</span><strong>$" + (selectedBay.rate * 2) + "</strong>"
+      + "<span>Estimated date</span><strong>" + (dateName ? dateName.label : "") + "</strong>"
+      + "<span>Start time</span><strong>" + (selectedTime || "Not selected") + "</strong>";
+
+    const confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.className = "button confirm-button";
+    confirm.textContent = "Confirm reservation";
+    confirm.disabled = !selectedTime;
+    confirm.style.opacity = selectedTime ? "1" : ".55";
+
+    bookingContent.append(heading, dateSection, timeSection, summary, confirm);
   }
 
-  function renderSitterButton() {
-    sitterButton.textContent = sitterInterest ? "You're on the interest list" : "Keep me posted";
-    sitterButton.setAttribute("aria-pressed", sitterInterest ? "true" : "false");
-    document.getElementById("sitter-note").textContent = sitterInterest
-      ? "Your interest is saved on this device. No request has been sent."
-      : "Prototype only. This does not send a request or book a sitter.";
+  function closeBooking() {
+    modal.hidden = true;
+    document.body.style.overflow = "";
   }
 
-  document.getElementById("today-label").textContent = today.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-  document.getElementById("watering-date").value = todayString;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.hidden = false;
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(function () { toast.hidden = true; }, 3500);
+  }
 
-  document.getElementById("add-plant").addEventListener("click", function () {
-    formPanel.hidden = !formPanel.hidden;
-    if (!formPanel.hidden) document.getElementById("plant-name").focus();
+  [zoneFilter, typeFilter, rateFilter].forEach(function (filter) {
+    filter.addEventListener("change", render);
+  });
+  densitySlider.addEventListener("input", render);
+
+  document.getElementById("reset-filters").addEventListener("click", function () {
+    zoneFilter.value = "all";
+    typeFilter.value = "all";
+    rateFilter.value = "999";
+    densitySlider.value = "8";
+    render();
   });
 
-  document.getElementById("cancel-add").addEventListener("click", function () {
-    plantForm.reset();
-    document.getElementById("watering-date").value = todayString;
-    formPanel.hidden = true;
-  });
-
-  plantForm.addEventListener("submit", function (event) {
-    event.preventDefault();
-    const formData = new FormData(plantForm);
-    plants.push({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      name: String(formData.get("name")).trim(),
-      species: String(formData.get("species")).trim(),
-      intervalDays: Number(formData.get("interval")),
-      lastWatered: String(formData.get("lastWatered"))
-    });
-    plantForm.reset();
-    document.getElementById("watering-date").value = todayString;
-    formPanel.hidden = true;
-    activeFilter = "all";
-    filterButtons.forEach(function (button) {
-      button.setAttribute("aria-pressed", button.dataset.filter === "all" ? "true" : "false");
-    });
-    renderPlants();
-  });
-
-  document.getElementById("plant-grid").addEventListener("click", function (event) {
-    const button = event.target.closest("button[data-action]");
+  bayGrid.addEventListener("click", function (event) {
+    const button = event.target.closest("button[data-action='book']");
     if (!button) return;
-    const card = button.closest(".plant-card");
-    const plant = plants.find(function (item) { return item.id === card.dataset.id; });
-    if (!plant) return;
+    const card = button.closest(".bay-card");
+    const bay = bays.find(function (item) { return item.id === card.dataset.id; });
+    if (bay) openBooking(bay);
+  });
 
-    if (button.dataset.action === "water") {
-      plant.lastWatered = todayString;
-    } else if (button.dataset.action === "remove") {
-      plants = plants.filter(function (item) { return item.id !== plant.id; });
+  bookingContent.addEventListener("click", function (event) {
+    const dateButton = event.target.closest("button[data-date]");
+    if (dateButton) {
+      selectedDate = dateButton.dataset.date;
+      renderBooking();
+      return;
     }
-    renderPlants();
-  });
-
-  filterButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      activeFilter = button.dataset.filter;
-      filterButtons.forEach(function (item) {
-        item.setAttribute("aria-pressed", item === button ? "true" : "false");
+    const timeButton = event.target.closest("button[data-time]");
+    if (timeButton) {
+      selectedTime = timeButton.dataset.time;
+      renderBooking();
+      return;
+    }
+    if (event.target.closest(".confirm-button") && selectedTime) {
+      reservations.push({
+        bay: selectedBay,
+        date: selectedDate,
+        time: selectedTime
       });
-      renderPlants();
-    });
+      document.getElementById("reservation-count").textContent = reservations.length;
+
+      const dateName = dateLabel(0);
+      const dateText = Array.from(bookingContent.querySelectorAll("[data-date]"))
+        .find(function (button) { return button.dataset.date === selectedDate; });
+      bookingContent.innerHTML =
+        '<div class="confirmation"><div class="confirmation-mark" aria-hidden="true">✓</div>'
+        + '<p class="eyebrow">Reservation confirmed</p>'
+        + '<h2 id="booking-title">You’re booked.</h2>'
+        + '<p>' + selectedBay.name + '<br>' + (dateText ? dateText.textContent : dateName.label) + ' at ' + selectedTime + '</p>'
+        + '<button type="button" class="button" id="done-button">Done</button></div>';
+    }
   });
 
-  sitterButton.addEventListener("click", function () {
-    sitterInterest = !sitterInterest;
-    storage.set("sprig-sitter-interest", sitterInterest);
-    renderSitterButton();
+  document.getElementById("done-button");
+  bookingContent.addEventListener("click", function (event) {
+    if (event.target.id === "done-button") {
+      closeBooking();
+      showToast("Reservation added to My reservations.");
+    }
   });
 
-  window.addEventListener("hashchange", showView);
-  renderPlants();
-  renderSitterButton();
-  showView();
+  document.getElementById("close-modal").addEventListener("click", closeBooking);
+  modal.addEventListener("click", function (event) {
+    if (event.target === modal) closeBooking();
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !modal.hidden) closeBooking();
+  });
+
+  document.getElementById("reservations-button").addEventListener("click", function () {
+    if (reservations.length === 0) {
+      showToast("No reservations yet. Select a bay to get started.");
+    } else {
+      const latest = reservations[reservations.length - 1];
+      showToast(latest.bay.name + " · " + latest.time + " reservation saved.");
+    }
+  });
+
+  render();
 })();

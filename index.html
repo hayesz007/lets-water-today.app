@@ -3,123 +3,106 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f4f4ed">
-  <meta name="description" content="A simple plant watering tracker that helps you remember when your plants need care.">
-  <title>Sprig | Plant care</title>
+  <meta name="theme-color" content="#f6f4ef">
+  <meta name="description" content="Find and book local garage bays, lifts, and specialty tools.">
+  <title>BayShare | Find your bay</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="#plants" id="brand-name" aria-label="Sprig, my plants">Sprig</a>
-    <nav aria-label="Main">
-      <a href="#plants">My plants</a>
-      <a href="#sitter">Plant sitter</a>
+    <a class="brand" href="#" aria-label="BayShare home">
+      <span class="brand-mark" aria-hidden="true"><span></span></span>
+      <span>BayShare</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a class="nav-active" href="#bays">Find a bay</a>
+      <button class="account-button" type="button" id="reservations-button">My reservations <span id="reservation-count">0</span></button>
     </nav>
   </header>
 
   <main>
-    <section id="plants" data-view>
-      <div class="page-heading">
-        <div>
-          <p class="eyebrow" id="today-label">Your little patch of green</p>
-          <h1 id="tagline">A little care goes a long way.</h1>
-          <p class="lead" id="pitch">A calmer way to remember when every plant needs a drink.</p>
-        </div>
-        <button class="button add-button" id="add-plant" type="button"><span aria-hidden="true">+</span> Add a plant</button>
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">Garage space, on demand</p>
+        <h1 id="page-title">Make room for the repair.</h1>
+        <p class="lead">Book a local lift, work bay, or specialty tool when you need it.</p>
       </div>
-
-      <section class="overview" aria-label="Plant care summary">
-        <div class="overview-mark" aria-hidden="true">✳</div>
-        <div>
-          <p class="overview-label">Your plant shelf</p>
-          <p class="overview-summary" id="due-summary" aria-live="polite"></p>
-        </div>
-        <p class="plant-count" id="plant-count"></p>
-      </section>
-
-      <section class="add-panel" id="plant-form-panel" hidden aria-labelledby="form-title">
-        <div class="form-heading">
-          <div>
-            <p class="eyebrow">A new leafy friend</p>
-            <h2 id="form-title">Add a plant</h2>
-          </div>
-          <button class="text-button" id="cancel-add" type="button">Cancel</button>
-        </div>
-        <form id="plant-form">
-          <label class="field">
-            <span>Plant name</span>
-            <input id="plant-name" name="name" type="text" placeholder="e.g. Kitchen pothos" maxlength="50" required>
-          </label>
-          <label class="field">
-            <span>Plant type <span class="optional">Optional</span></span>
-            <input name="species" type="text" placeholder="e.g. Golden pothos" maxlength="60">
-          </label>
-          <label class="field field-short">
-            <span>Water every</span>
-            <span class="input-with-unit"><input name="interval" type="number" min="1" max="90" value="7" required><span>days</span></span>
-          </label>
-          <label class="field field-short">
-            <span>Last watered</span>
-            <input id="watering-date" name="lastWatered" type="date" required>
-          </label>
-          <div class="form-actions">
-            <button class="button" type="submit">Save plant</button>
-          </div>
-        </form>
-      </section>
-
-      <div class="list-heading">
-        <h2>Your plants</h2>
-        <div class="filter-controls" role="group" aria-label="Filter plants">
-          <button type="button" data-filter="all" aria-pressed="true">All</button>
-          <button type="button" data-filter="due" aria-pressed="false">Need water</button>
-          <button type="button" data-filter="healthy" aria-pressed="false">Doing well</button>
-        </div>
+      <div class="hero-stats" aria-label="Network summary">
+        <div><strong id="network-bays">8</strong><span>bay options</span></div>
+        <div><strong id="network-distance">4.8 mi</strong><span>avg. drive</span></div>
+        <div><strong id="weekend-slots">24</strong><span>weekend slots</span></div>
       </div>
-      <div class="plant-grid" id="plant-grid"></div>
-      <p class="empty" id="empty-message" hidden></p>
-      <p class="storage-note">Your plant list is saved in this browser on this device.</p>
     </section>
 
-    <section id="sitter" data-view hidden>
-      <div class="sitter-intro">
-        <p class="eyebrow">A future Sprig service</p>
-        <h1>Going away?<br>Leave the leaves to us.</h1>
-        <p class="lead">Find a trusted local plant sitter to keep your indoor jungle happy while you're out of town.</p>
-        <button class="button" id="sitter-interest" type="button" aria-pressed="false">Keep me posted</button>
-        <p class="sitter-note" id="sitter-note" aria-live="polite"></p>
-      </div>
+    <section class="search-panel" aria-label="Search bays">
+      <label class="field">
+        <span>Area / zone</span>
+        <select id="zone-filter">
+          <option value="all">All areas</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Equipment</span>
+        <select id="type-filter">
+          <option value="all">All equipment</option>
+          <option value="Two-Post Lift">Two-Post Lift</option>
+          <option value="Floor/Alignment Space">Floor / Alignment Space</option>
+          <option value="Specialty Tools">Specialty Tools</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Maximum hourly rate</span>
+        <select id="rate-filter">
+          <option value="999">Any rate</option>
+          <option value="20">Up to $20</option>
+          <option value="30">Up to $30</option>
+          <option value="40">Up to $40</option>
+        </select>
+      </label>
+      <button class="button reset-button" id="reset-filters" type="button">Reset</button>
+    </section>
 
-      <div class="sitter-details">
-        <div class="sitter-step">
-          <span class="step-number">01</span>
-          <h2>Share your plant list</h2>
-          <p>Your care notes tell a sitter exactly what each plant needs.</p>
-        </div>
-        <div class="sitter-step">
-          <span class="step-number">02</span>
-          <h2>Meet a local sitter</h2>
-          <p>Choose someone nearby and agree on dates before a trip.</p>
-        </div>
-        <div class="sitter-step">
-          <span class="step-number">03</span>
-          <h2>Come home to happy plants</h2>
-          <p>Get simple care updates while you're away.</p>
-        </div>
+    <section class="density-panel" aria-labelledby="density-title">
+      <div class="density-copy">
+        <p class="eyebrow">Local network</p>
+        <h2 id="density-title">Bay density</h2>
       </div>
+      <div class="density-control">
+        <div class="slider-label">
+          <label for="density-slider">Bays near you</label>
+          <output id="density-output" for="density-slider">8 bays</output>
+        </div>
+        <input id="density-slider" type="range" min="2" max="15" value="8" step="1">
+        <div class="slider-scale" aria-hidden="true"><span>2</span><span>15</span></div>
+      </div>
+      <p class="density-impact" id="density-impact" aria-live="polite"></p>
+    </section>
 
-      <aside class="business-note">
-        <p class="eyebrow">A sensible way to grow</p>
-        <h2>Keep the basics free. Charge for the extra care.</h2>
-        <p>Ads could make plant advice feel less trustworthy. A better first step is a free watering tracker, with an optional paid plan for shared collections and detailed care guides. If local sitters join later, Sprig could earn a small fee from each completed booking.</p>
-        <p class="prototype-label">Sitter matching, payments, and bookings are not available in this student prototype.</p>
-      </aside>
+    <section class="results" aria-labelledby="results-title">
+      <div class="results-heading">
+        <div>
+          <p class="eyebrow">Available today</p>
+          <h2 id="results-title">Bays near you</h2>
+        </div>
+        <p id="result-count"></p>
+      </div>
+      <div class="bay-grid" id="bay-grid"></div>
+      <p class="empty-state" id="empty-state" hidden>No bays match these filters. Try a wider search.</p>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>Student prototype for BSAD 281 at St. Francis Xavier University. Not a real company — all data is fictional.</p>
+    <p>BayShare · Local garage space for do-it-yourself repairs</p>
   </footer>
+
+  <div class="modal-backdrop" id="booking-modal" hidden>
+    <section class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="booking-title">
+      <button class="modal-close" id="close-modal" type="button" aria-label="Close booking panel">×</button>
+      <div id="booking-content"></div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="data.js"></script>
   <script src="app.js"></script>
