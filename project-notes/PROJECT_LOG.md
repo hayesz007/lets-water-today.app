@@ -8,7 +8,6 @@ Zach H
 BayShare
 **Live site link:**
 https://hayesz007.github.io/lets-water-today.app/
-
 ---
 
 ## Work sessions
@@ -24,8 +23,6 @@ Copy this block for each session.
 - **What worked:** The zone/equipment/rate filters, the Local Bay Density simulator, and the simulated booking modal all worked on the first pass.
 - **What broke, and how we fixed it:** Nothing broke in the code, though I needed to start a local Python HTTP server on port 8000 in the terminal to preview the site in Codespaces.
 - **Committed?** yes
-
----
 
 ## Things that broke (running list)
 
