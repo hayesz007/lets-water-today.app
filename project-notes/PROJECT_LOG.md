@@ -3,8 +3,11 @@
 Keep this up to date as you go — a few lines per work session is enough. It's much harder to reconstruct at the end.
 
 **Team name:**
+Zach H
 **Startup name:**
+BayShare
 **Live site link:**
+https://hayesz007.github.io/lets-water-today.app/
 
 ---
 
@@ -13,14 +16,14 @@ Keep this up to date as you go — a few lines per work session is enough. It's 
 Copy this block for each session.
 
 ### Session — [date] — driver: [first name]
+### Session - Nov 23 - driver: Zach
 
-- **Goal for this session:**
+- **Goal for this session:** Convert the starter project into the BayShare prototype with filters, a local bay-density simulator, and a booking flow.
 - **Key prompts we gave Copilot** (paste the important ones):
-  1.
-  2.
-- **What worked:**
-- **What broke, and how we fixed it:**
-- **Committed?** yes / no — commit message:
+  1. Refactor index.html, styles.css, app.js, and data.js into BayShare, a peer-to-peer garage bay, two-post lift, and tool booking web app using plain HTML, CSS, and JavaScript with filters, a Local Bay Density control, and a simulated booking modal.
+- **What worked:** The zone/equipment/rate filters, the Local Bay Density simulator, and the simulated booking modal all worked on the first pass.
+- **What broke, and how we fixed it:** Nothing broke in the code, though I needed to start a local Python HTTP server on port 8000 in the terminal to preview the site in Codespaces.
+- **Committed?** yes
 
 ---
 
