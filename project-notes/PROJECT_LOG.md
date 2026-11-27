@@ -7,13 +7,10 @@ Zach H
 **Startup name:**
 BayShare
 **Live site link:**
-https://studious-space-telegram-96wv947r6j47h9x74-8000.app.github.dev/---
+https://hayesz007.github.io/lets-water-today.app/ 
 
 ## Work sessions
 
-Copy this block for each session.
-
-### Session — [date] — driver: [first name]
 ### Session - Nov 23 - driver: Zach
 
 - **Goal for this session:** Convert the starter project into the BayShare prototype with filters, a local bay-density simulator, and a booking flow.
